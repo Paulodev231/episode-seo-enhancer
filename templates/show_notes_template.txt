@@ -1,0 +1,23 @@
+Episode Title: {{Title}}
+
+Short summary (2-3 sentences):
+{{Summary}}
+
+Chapter timestamps:
+- 00:00 Intro
+- 02:15 Topic A
+- 10:30 Interview with Guest
+- 28:45 Closing notes
+
+Suggested CTAs:
+- Subscribe on your preferred podcast app
+- Visit link.example.com/episode for assets and links
+
+Social hooks (X/Twitter):
+- Hook 1: One-line punchy hook
+- Hook 2: Question to engage listeners
+- Hook 3: Micro-quote from guest
+
+LinkedIn caption (6 lines):
+Line 1...
+Line 2...

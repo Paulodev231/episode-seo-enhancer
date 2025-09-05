@@ -1,0 +1,136 @@
+{
+    "name": "Episode SEO & Distribution Enhancer",
+    "nodes": [
+      {
+        "parameters": {
+          "url": "https://example.com/feed.rss",
+          "interval": 15
+        },
+        "name": "RSS Feed",
+        "type": "n8n-nodes-base.rssFeedRead",
+        "typeVersion": 1,
+        "position": [200, 200]
+      },
+      {
+        "parameters": {
+          "functionCode": "/* Normalize RSS item fields */\nconst it = items[0].json;\nreturn [{json:{\n  title: it.title || it['itunes:title'] || '',\n  link: it.link || it.enclosure || '',\n  pubDate: it.pubDate || it.pubdate || '',\n  audioUrl: (it.enclosure && it.enclosure.url) ? it.enclosure.url : (it.link || ''),\n  guid: it.guid || it.id || ''\n}}];"
+        },
+        "name": "Function - normalize item",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [460, 200]
+      },
+      {
+        "parameters": {
+          "operation": "download",
+          "url": "={{$json[\"audioUrl\"]}}"
+        },
+        "name": "HTTP Request - fetch audio",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 1,
+        "position": [740, 200]
+      },
+      {
+        "parameters": {
+          "operation": "transcribe",
+          "model": "whisper-1",
+          "input": "={{ $binary.data }}",
+          "options": {}
+        },
+        "name": "OpenAI - Transcribe (fallback)",
+        "type": "n8n-nodes-base.openai",
+        "typeVersion": 1,
+        "position": [1020, 200]
+      },
+      {
+        "parameters": {
+          "functionCode": "/* Prepare prompt for SEO title, show notes, chapters and hooks */\nconst transcript = $json.transcript || $json.text || '';\nconst basePrompt = `Create: 1) three SEO-optimized episode title variants; 2) show notes (200-300 words); 3) chapter timestamps in a short list; 4) three X post hooks (one-liners); 5) a 6-line LinkedIn caption. Use the transcript below as source.\\n\\nTRANSCRIPT:\\n${transcript}`;\nreturn [{json:{prompt: basePrompt}}];"
+        },
+        "name": "Function - build prompt",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [1300, 200]
+      },
+      {
+        "parameters": {
+          "model": "gpt-4o-mini",
+          "temperature": 0.2,
+          "messages": "=[{\"role\":\"user\",\"content\":{{$json[\"prompt\"]}}}]",
+          "options": {}
+        },
+        "name": "OpenAI - Generate metadata",
+        "type": "n8n-nodes-base.openai",
+        "typeVersion": 1,
+        "position": [1580, 200]
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "application": "={{$env.AIRTABLE_APP_ID}}",
+          "table": "Episodes",
+          "fields": "={\"TitleVariantA\": $json.choices[0].message.content, \"TitleVariantB\": \"\", \"TitleVariantC\":\"\", \"ShowNotes\": $json.choices[0].message.content, \"Transcript\": $json.transcript }"
+        },
+        "name": "Airtable - Save metadata",
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 1,
+        "position": [1840, 200]
+      },
+      {
+        "parameters": {
+          "operation": "upload",
+          "binaryData": "data",
+          "fileName": "={{'episode-'+$json.guid+'.txt'}}"
+        },
+        "name": "Google Drive - Upload show notes",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 1,
+        "position": [1840, 420]
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "databaseId": "={{$env.NOTION_DATABASE_ID}}",
+          "properties": "={\"Name\":{\"title\":[{\"text\":{\"content\":\"Review episode: {{$json.title}}\"}}}], \"Status\":{\"select\":{\"name\":\"Review\"}}}"
+        },
+        "name": "Notion - Create review task",
+        "type": "n8n-nodes-base.notion",
+        "typeVersion": 1,
+        "position": [2100, 200]
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "application": "={{$env.SOCIAL_SCHEDULER_APP}}",
+          "bodyParametersJson": "={\"text\": \"{{$json.socialHook1}}\", \"send_at\": \"{{ $json.schedule_time }}\"}"
+        },
+        "name": "Social Scheduler - schedule posts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 1,
+        "position": [2100, 420]
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {"name":"note","value":"Episode processed and metadata saved"}
+            ]
+          }
+        },
+        "name": "Set - audit",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 1,
+        "position": [2100, 600]
+      }
+    ],
+    "connections": {
+      "RSS Feed": {"main":[[{"node":"Function - normalize item","type":"main","index":0}]]},
+      "Function - normalize item": {"main":[[{"node":"HTTP Request - fetch audio","type":"main","index":0}]]},
+      "HTTP Request - fetch audio": {"main":[[{"node":"OpenAI - Transcribe (fallback)","type":"main","index":0}]]},
+      "OpenAI - Transcribe (fallback)": {"main":[[{"node":"Function - build prompt","type":"main","index":0}]]},
+      "Function - build prompt": {"main":[[{"node":"OpenAI - Generate metadata","type":"main","index":0}]]},
+      "OpenAI - Generate metadata": {"main":[[{"node":"Airtable - Save metadata","type":"main","index":0},{"node":"Google Drive - Upload show notes","type":"main","index":0},{"node":"Notion - Create review task","type":"main","index":0},{"node":"Social Scheduler - schedule posts","type":"main","index":0},{"node":"Set - audit","type":"main","index":0}]]}
+    },
+    "active": false,
+    "settings": {}
+  }
+  
