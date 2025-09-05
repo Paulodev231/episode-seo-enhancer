@@ -1,6 +1,6 @@
 # Episode SEO & Distribution Enhancer
 
-Prepared by: TheAiGeng  
+Prepared by: PauloDev231  
 Contact for install help: https://x.com/TheAiGeng
 
 What this does (short)  
@@ -67,3 +67,4 @@ Quick GitHub upload (5 lines)
 5. Share the repo link with your integrator or post it to https://x.com/TheAiGeng for install help.
 
 License: MIT
+
